@@ -1,0 +1,9 @@
+.idea/
+venv/
+build/
+__pycache__/
+old/
+
+reminder.db
+reminder.spec
+dist/reminder.db
