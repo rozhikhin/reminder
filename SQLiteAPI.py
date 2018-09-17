@@ -13,7 +13,7 @@ class DB(QWidget):
         """
         Конструктор инициализирует два словаря для сохранения в БД значений по-умолчанию
         """
-        super(DB, self).__init__()
+        # super(DB, self).__init__()
         self.db_file = os.path.join(os.getcwd(), "reminder.db")
 
        # Настройки по-умолчанию для текста
@@ -32,7 +32,7 @@ class DB(QWidget):
         self.settings = {
             "id_setting": 1,
             "main_text": "Здесь Ваш текст",
-            "time_out": 60,
+            "time_out": 30,
             "counter": 0,
             "time_dont_show_after": "21:00",
             "time_start_show_since": "09:00",

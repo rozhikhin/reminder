@@ -5,7 +5,6 @@ import SettingForm, SQLiteAPI, platform
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtWidgets import QFontDialog, QColorDialog
-from PyQt5.QtCore import QDate, QTime, QDateTime, Qt
 from RBase import RBase
 
 
@@ -43,18 +42,15 @@ class SettingsWindow(QtWidgets.QWidget, SettingForm.Ui_settingsForm, RBase):
         self.messageTextEdit.setAlignment(QtCore.Qt.AlignCenter)
         self.messageTextEdit.textChanged.connect(self.text_changed)
 
-
     def text_changed(self):
         self.messageTextEdit.setTextColor(QColor(self.changed_font_and_color["text_color"] ))
 
     def close_setting_window(self):
         """
-        Функция close_setting_window() запускает таймер главного окна через переменную parent
-        и закрывает окно настроек
+        Функция close_setting_window()
         """
-        # self.parent.start_timer(self.parent.interval, self.parent.closeMainWindow)
-        self.parent.start_timer()
         self.close()
+        self.parent.show_main_window()
 
     def set_settings(self):
         """
@@ -137,10 +133,10 @@ class SettingsWindow(QtWidgets.QWidget, SettingForm.Ui_settingsForm, RBase):
         self.changed_settings["time_repeat_show_reminder"] = int(self.lineEditTimeRepeat.text()) * 60
 
         self.sql_api.save_settings(self.changed_settings, self.changed_font_and_color)
-        # Перед закрытием окна с настройками запусить таймер главного окна
         self.parent.set_font_and_color()
         self.parent.set_settings()
         self.close()
+        self.close_setting_window()
 
     def clear_counter(self):
         """
@@ -150,16 +146,7 @@ class SettingsWindow(QtWidgets.QWidget, SettingForm.Ui_settingsForm, RBase):
         self.sql_api.change_counter(counter)
         self.parent.labelCounter.setText(str(counter))
         self.parent.labelCounter.setStyleSheet(" QLabel {color: #91bbd1 }")
-
-        # this_moment = QtCore.QTime.fromString('12:55')
-        # if QtCore.QTime.currentTime() > QtCore.QTime.fromString('18:55'):
-        #     print(1)
-        # else:
-        #     print(2)
-        # print(this_moment)
-        # print(self.timeEditDontShowAfter.time().toString("hh:mm"))
-        # self.timeEditDontShowAfter.setTime(this_moment)
-        # self.timeEditStartShowSince
+        self.close_setting_window()
 
     def reset_to_default(self):
         """
@@ -171,24 +158,7 @@ class SettingsWindow(QtWidgets.QWidget, SettingForm.Ui_settingsForm, RBase):
         self.set_font_and_color()
         self.set_settings()
         self.parent.labelCounter.setStyleSheet(" QLabel {color: #91bbd1 }")
-        self.close()
-        # self.parent.t.calcel()
+        self.close_setting_window()
 
-
-    def closeEvent(self, event):
-        """
-        Функция closeEvent() обнуляет ссылку на окно настроек
-        :param event:
-        :return: None
-        """
-        self.parent.window_settings = None
-        self.parent.show()
-
-# if __name__ == "__main__":
-#     import sys
-#     app = QApplication(sys.argv)
-#     windowSettings = SettingsWindow()
-#     windowSettings.show()
-#     sys.exit(app.exec_())
 
 

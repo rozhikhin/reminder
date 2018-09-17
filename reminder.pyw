@@ -5,11 +5,10 @@
 import MainForm, settings
 import threading
 import os
-import time
 import sys
 import SQLiteAPI
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtWidgets import QApplication, QMenu, QAction
+from PyQt5.QtWidgets import QApplication, QMenu, QAction, QSystemTrayIcon, QStyle, QMessageBox
 from RBase import RBase
 
 class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
@@ -22,47 +21,75 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         вызывает функции для настройки интерфейса
         :param parent: default: None
         """
-
+        # Переменая pid_file указывает путь к файлу, который создается приложением при первом запуске
+        # При запуске приложение проверяет наличие данного файла и, если он существует, то второй экземпляр
+        # приложения не запускается
         self.pid_file = os.path.join(os.getcwd(), "reminder.pid")
-        self.exit_app_if_running(self.pid_file)
+        # Инициализация переменной interval - количество секунд, в течении который показывается окно напоминалки
         self.interval = 0
+        # Инициализация переменной time_repeat_show_reminder - количество секунд, в течении которых окно скрыто
         self.time_repeat_show_reminder = 0
+        # Инициализация переменной time_repeat_show_reminder - время суток, ПОСЛЕ которого окно приложения не показывается
+        self.time_dont_show_after = None
+        # Инициализация переменной time_start_show_since - время суток, ДО которого окно приложения не показывается
+        self.time_start_show_since = None
+        # Инициализация переменной t1 - первый таймер
+        self.t1 = None
+        # Инициализация переменной t2 - второй таймер
+        self.t2 = None
 
+        # Консструктор
         QtWidgets.QMainWindow.__init__(self, parent)
+        # Инициализация GUI
         self.setupUi(self)
+        # Установка фиксированного размера окна
         self.setFixedSize(400, 300)
+        # Установка заголовка окна
         self.setWindowTitle("Напоминалка")
+        # Установка флагов
         self.setWindowFlags(
             # Показать окно поверх всех окон
             QtCore.Qt.WindowStaysOnTopHint |
+            # Показать окно без заголовка и рамок
             QtCore.Qt.FramelessWindowHint
         )
 
+        # Цвет фона главного окна
         self.setStyleSheet("QMainWindow {background: #00356a} ")
+        # Цвет фона кнопки счетчика - buttonMinus
         self.buttonMinus.setStyleSheet("QPushButton {background: #3286aa} ")
+        # Цвет фона кнопки счетчика - buttonPlus
         self.buttonPlus.setStyleSheet("QPushButton {background: #3286aa} ")
+        # Цвет текста надписи - счетчика
         self.labelCounter.setStyleSheet("QLabel {color: #91bbd1} ")
-        # Экземпляр класса DB() из модуля SQLiteAPI
+        # Экземпляр класса DB() из модуля SQLiteAPI для доступа к БД
         self.sql_api = SQLiteAPI.DB()
         # Получить настройки из базы и применить их к главному окну приложения
         # или создать базу, заполнить ее значениями по-умолчанию и затем применить настройки по-умолчанию
         self.sql_api.init_db()
         # Экземпляр класса SettingsWindow из модуля settings
         self.window_settings = None
-        # Увеличить счетчик
+        # Привязка метода increase_counter к событию click кнопки buttonPlus.
+        # Метод увеличивает значение счетчика
         self.buttonPlus.clicked.connect(self.increase_counter)
-        # Уменьшить счетчик
+        # Привязка метода decrease_counter к событию click кнопки buttonMinus.
+        # Метод уменьшает значение счетчика
         self.buttonMinus.clicked.connect(self.decrease_counter)
         # Получить из базы и применить настройки шрифта и цвет текста
         self.set_font_and_color()
         # Получить из базы и применить общие настройки
         self.set_settings()
+        # Созать иконку с меню в системном трее
+        self.create_tray_icon()
+        # Функция проверяет, не запущен ли уже экземпляр приложения путем проверки наличия файла по пути
+        # указанному в переменной класса pid_file. Если файл существует - это означает, что уже запущен один экземпляр
+        # приложения и осуществляется завершение работы второго экземпляра
+        self.exit_app_if_running(self.pid_file)
 
-        self.set_hot_key()
 
     def contextMenuEvent(self, event):
         """
-        Функции contextMenuEvent(event) для создания контекстного меню
+        Функции contextMenuEvent(event) для создания контекстного меню главного окна
         :param event:
         :return: None
         """
@@ -75,89 +102,156 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         cmenu.addAction("Настройки", self.show_settings_window)
         cmenu.exec_(self.mapToGlobal(event.pos()))
 
+
+
+    def not_show_window_from_to(self):
+        """
+        Функция not_show_window_from_to() проверяет, не находится ли текущее время суток в диапазоне времени,
+        определяемом параметрами
+        time_dont_show_after - время, после кторого не показывать окно
+        time_start_show_since - время, до которого не показывать окно (или с которого начинать показывать)
+        :return: None
+        """
+        if QtCore.QTime.currentTime() > QtCore.QTime.fromString(self.time_dont_show_after) or \
+                QtCore.QTime.currentTime() < QtCore.QTime.fromString(self.time_start_show_since):
+            self.hide()
+
     # Получить настройки из базы и применить их к соответсвующим компонентам
-    # interval сделать свойством класса, чтобы можно было получить доступ из другого окна
+    # сделать свойством класса, чтобы можно было получить доступ из другого окна
     def set_settings(self):
         """
-        Функция set_settings() получает общие настройки для оформления главного окна программы из базы данных и применяет их
+        Функция set_settings() получает общие настройки для оформления главного окна программы из базы данных
+        и применяет их.
+        message - основное сообщение, которое выводится в окне
+        interval - переменная класса (чтобы быть доступной другим методам класса) - время, в течении которого показывать
+            окно
+        counter - значение счетчика
+        time_dont_show_after - переменная класса - время суток, после кторого не показывать окно
+        time_start_show_since -  переменная класса - время суток, до кторого не показывать окно
+            (или с которого начинать показывать)
+        time_repeat_show_reminder - переменная класса - время в секундах (в форме настроек задается в минутах),
+            через которое повторять показ окна
+        :return: None
         """
-        message, self.interval, counter, time_dont_show_after, time_start_show_since, self.time_repeat_show_reminder = self.sql_api.get_settings()
-        # print(self.sql_api.get_settings())
-        # return
-
+        message, self.interval, counter, self.time_dont_show_after, self.time_start_show_since, self.time_repeat_show_reminder = self.sql_api.get_settings()
+        # Вызов функции, которая разивает сообщение на строки и применяет к каждой строке стиль
         self.add_text_to_text_edit(self.messageTextEdit, message)
+        # Если счетчик меньше нуля, то применить соответствующий стиль
         if counter < 0:
             self.labelCounter.setStyleSheet(" QLabel {color: red }")
+        # Вывести значение счетчика на форме
         self.labelCounter.setText(str(counter))
-        self.start_timer()
+        # Отключить TextEdit главной формы, чтобы не было возможности редактировать, минуя форму настроек
         self.messageTextEdit.setDisabled(True)
 
     def set_font_and_color(self):
         """
         Функция set_font_and_color() получает настройки шрифта и цвет текста для оформления главного окна программы
         из базы данных и применяет их
+        size - размер шрифта
+        family - семейство шрифта,
+        bold - boolean - вес (жирность) шрифта
+        italic - boolean - курсив
+        italic - boolean - курсив
+        strikeout - boolean - перечеркнутый
+        color - цвет текста
+        На MACOS доступна только кнопка выбора цвета шрифта
         """
         size, family, bold, italic, strikeout, color = self.sql_api.get_font_and_color_text()
+        # Применяем получанные настройки к тексту. Функция set_font_to_text_edit определена в классе RBase
+        # модуля RBase. Класс RBase наследуется данным классом
         self.set_font_to_text_edit(self.messageTextEdit, size, family, bold, italic, strikeout, color)
-        # self.messageTextEdit.setStyleSheet("QTextEdit {color: " + color + "; background: #00356a; border: 0 }")
+        # Применяем стиль к TextEdit - меняем фон и убираем границы
         self.messageTextEdit.setStyleSheet("QTextEdit {background: #00356a; border: 0 }")
-
-    def start_timer(self):
-        """
-        Функция создает и запускает таймер, который отсчитывает время показа главного окна
-        :param interval: integer - время показа главного окна программы
-        :param time_repeat_show_reminder
-        :param function: - функция - вызывается по завершении интервала, т.е. срабатывания таймера
-        """
-        if self.isVisible():
-            self.hide_main_window()
-        else:
-            self.show_main_window()
-        self.t = threading.Timer(self.interval, self.start_timer)
-        self.t.start()
 
     def show_settings_window(self):
         """
-        Функция show_settings_window() показывает окно настроек, останавливает таймер и передает окну настроек ссылку на главное окно
+        Функция show_settings_window() показывает окно настроек, останавливает таймер и передает окну настроек
+        ссылку на главное окно
         """
+        # Скрываем главное окно
         self.hide()
+        # Переменной window_settings назначаем ссылку на объект класса SettingsWindow
         self.window_settings = settings.SettingsWindow()
-        self.t.cancel()
+        # Останавливаем таймер, запущенный в данный момент. По таймерам срабатывают функции скрытия
+        # и показа главнонго окна
+        self.stop_timers()
+        # Переменной класса window_settings - parent - устанавливаем ссылку на главное окно для последующего доступа
+        # из окна настроек к методам и атрибутам главного окна
         self.window_settings.parent = self
+        # Показываем окно настроек
         self.window_settings.show()
 
+    def stop_timers(self):
+        """
+        Функция stop_timers() останавливает таймер, запущенный в момент ее вызова
+        :return: None
+        """
+        if self.t1:
+            self.t1.cancel()
+        if self.t2:
+            self.t2.cancel()
+
     def close_main_window(self):
-        """ Функция closeMainWindow() останавливает таймер и закрывает главное окно"""
-        self.t.cancel()
+        """
+        Функция closeMainWindow() останавливает таймеры и закрывает главное окно
+        :return: None
+        """
+        self.stop_timers()
         self.close()
 
     def hide_main_window(self):
+        """
+        Функция hide_main_window() скрывает по таймеру главное окно через time_repeat_show_reminder секунд
+        :return: None
+        """
+        # Проверяем, не скрыто ли окно в данный момент. Если скрыто, то выходим из функции, ничего не выполняя
+        if self.isHidden():
+            return
+        # Если окно не скрыто, скрываем его
         self.hide()
-        time.sleep(self.time_repeat_show_reminder)
-    #
+        # Создаем таймер, который покажет окно через time_repeat_show_reminder секунд
+        self.t1 = threading.Timer(self.time_repeat_show_reminder, self.show_main_window)
+        # И запускаем таймер
+        self.t1.start()
+        # Останавливаем таймер, срабатывающий для сокрытия окна
+        if self.t2:
+            self.t2.cancel()
 
     def show_main_window(self):
+        """
+        Функция show_main_window() показывает по таймеру главное окно через interval секунд
+        :return: None
+        """
+        # Проверяем, не показано ли окно в данный момент. Если показано, то выходим из функции, ничего не выполняя
+        if self.isVisible():
+            return
+        # Если окно не показано, плказываем его
         self.show()
-
-    def set_hot_key(self):
-        self.quitAct = QAction(self.tr("&Quit"), self)
-        self.quitAct.setShortcut(self.tr("Ctrl+Q"))
-        self.quitAct.setStatusTip(self.tr("Quit the application"))
-        self.quitAct.triggered.connect(self.hide_main_window)
-
-        self.addAction(self.quitAct)
-
+        # Создаем таймер, который скроет окно через interval секунд
+        self.t2 = threading.Timer(self.interval, self.hide_main_window)
+        # И запускаем таймер
+        self.t2.start()
+        # Останавливаем таймер, срабатывающий для показа окна
+        if self.t1:
+            self.t1.cancel()
+        self.not_show_window_from_to()
 
     def increase_counter(self):
         """
         Функция increase_counter() увеличивает значение счетчика, отображает новое значение на форме
         и сохраняет его в базе данных
         """
+        # Получаем текущее значения счетчика, отображенное на форме
         counter = int(self.labelCounter.text())
+        # Увеличиваем его на 1
         counter += 1
+        # Если счетчик больше нуля, устанавливаем соответсвующий стиль
         if counter >= 0:
             self.labelCounter.setStyleSheet(" QLabel {color: #91bbd1 }")
+        # Отображваем обновленное значение счетчика на форме
         self.labelCounter.setText(str(counter))
+        # Сохраняем новое значение счетчика в базе
         self.sql_api.change_counter(counter)
 
     def decrease_counter(self):
@@ -165,11 +259,16 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         Функция decrease_counter() уменьшает значение счетчика, отображает новое значение на форме
         и сохраняет его в базе данных
         """
+        # Получаем текущее значения счетчика, отображенное на форме
         counter = int(self.labelCounter.text())
+        # Уменьшаем его на 1
         counter -= 1
+        # Если счетчик меньше нуля, устанавливаем соответсвующий стиль
         if counter < 0:
             self.labelCounter.setStyleSheet(" QLabel {color: red }")
+        # Отображваем обновленное значение счетчика на форме
         self.labelCounter.setText(str(counter))
+        # Сохраняем новое значение счетчика в базе
         self.sql_api.change_counter(counter)
 
     #
@@ -186,6 +285,12 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         self.move(x, y)
 
     def closeEvent(self, event):
+        """
+        Функция closeEvent() - событие закрытия окна - проверяет, существует ли по указанному пути файл - pid_file,
+         и, если существует, то удаляет его.
+        :param event:
+        :return:
+        """
         if os.path.exists(self.pid_file):
             if os.path.isfile(self.pid_file):
                 os.unlink(self.pid_file)
@@ -198,6 +303,25 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         f = open(self.pid_file, 'tw', encoding='utf-8')
         f.close()
 
+    def create_tray_icon(self):
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        show_action = QAction("Показать окно", self)
+        hide_action = QAction("Скрыть окно", self)
+        quit_action = QAction("Выход", self)
+        setting_action = QAction("Настройки", self)
+        show_action.triggered.connect(self.show_main_window)
+        hide_action.triggered.connect(self.hide_main_window)
+        setting_action.triggered.connect(self.show_settings_window)
+        quit_action.triggered.connect(self.close_main_window)
+        tray_menu = QMenu()
+        tray_menu.addAction(show_action)
+        tray_menu.addAction(hide_action)
+        tray_menu.addAction(quit_action)
+        tray_menu.addAction(setting_action)
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
+
 if __name__ == "__main__":
 
     app = QApplication(sys.argv)
@@ -206,19 +330,11 @@ if __name__ == "__main__":
 
 
     mainWindow = MainWindow()
-
-    # pid_file = os.path.join(os.getcwd(), "reminder.pid")
-    # if os.path.exists(pid_file):
-    #     if os.path.isfile(pid_file):
-    #         mainWindow.t.cancel()
-    #         sys.exit()
-    # f = open(pid_file, 'tw', encoding='utf-8')
-    # f.close()
-
-
     # Чтобы исключить мелькание, нужно изначально сместить окно за рамки экрана
     mainWindow.move(mainWindow.width() * -3, 0)
-    mainWindow.show()
+    # mainWindow.show()
+    mainWindow.not_show_window_from_to()
+    mainWindow.show_main_window()
 
     # Разместить окно в правом нижнем углу
     mainWindow.move_to_right_bottom_corner()
