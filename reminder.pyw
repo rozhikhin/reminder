@@ -2,12 +2,12 @@
 Модуль с классом MainWindow
 """
 
-import MainForm, settings
+import MainForm, settings, help
 import threading
 import os
 import sys
 import SQLiteAPI
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QApplication, QMenu, QAction, QSystemTrayIcon, QStyle, QMessageBox
 from RBase import RBase
 
@@ -96,10 +96,12 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         cmenu = QMenu(self)
         # При нажатии на кнопку "Скрыть окно" - скрыть главное окно приложения
         cmenu.addAction("Скрыть окно", self.hide_main_window)
-        # При нажатии на кнопку Выход - закрыть главное окно приложения
-        cmenu.addAction("Выход", self.close_main_window)
         # При нажатии на кнопку Настройки - открыть окно настроек
         cmenu.addAction("Настройки", self.show_settings_window)
+        # При нажатии на кнопку Справка - показать справку
+        cmenu.addAction("Справка", self.show_help)
+        # При нажатии на кнопку Выход - закрыть главное окно приложения
+        cmenu.addAction("Выход", self.close_main_window)
         cmenu.exec_(self.mapToGlobal(event.pos()))
 
 
@@ -237,6 +239,20 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
             self.t1.cancel()
         self.not_show_window_from_to()
 
+    def show_help(self):
+        if self.isHidden():
+            self.show()
+        self.help_window = help.HelpWindow()
+        # Останавливаем таймер, запущенный в данный момент. По таймерам срабатывают функции скрытия
+        # и показа главнонго окна
+        self.stop_timers()
+        # Переменной класса help_window - parent - устанавливаем ссылку на главное окно для последующего доступа
+        # из окна настроек к методам и атрибутам главного окна
+        self.help_window.parent = self
+        # Показываем окно
+
+        self.help_window.show()
+
     def increase_counter(self):
         """
         Функция increase_counter() увеличивает значение счетчика, отображает новое значение на форме
@@ -296,46 +312,61 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
                 os.unlink(self.pid_file)
 
     def exit_app_if_running(self, pid_file):
+        """
+        Функция exit_app_if_running(pid_file) - обеспечивает запуск только одного экземпляра программы.
+        При запуске самый первый экземпляр создает файл - pid_file. Также при запуске программа проверяет
+        наличие данного файла. Если данный файл обнаружен, то данный экземпляр завершает работу.
+        :param pid_file: str - путь к файлу
+        :return: None
+        """
+        # pid_file - путь к файлу
         self.pid_file = os.path.join(os.getcwd(), "reminder.pid")
+        # Если файл существует, завершить экземпляр приложения
         if os.path.exists(self.pid_file):
             if os.path.isfile(self.pid_file):
                 sys.exit()
+        # Если файл не существует, т.е. это первый экземпляр приложения, то созать фал pid_file
         f = open(self.pid_file, 'tw', encoding='utf-8')
         f.close()
 
     def create_tray_icon(self):
+        """
+        Функция tray_icon создает иконку приложения в системном трее с собственным контектсным меню
+        :return: None
+        """
         self.tray_icon = QSystemTrayIcon(self)
         self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        # Создание пунктов меню
         show_action = QAction("Показать окно", self)
         hide_action = QAction("Скрыть окно", self)
-        quit_action = QAction("Выход", self)
         setting_action = QAction("Настройки", self)
+        help_action = QAction("Справка", self)
+        quit_action = QAction("Выход", self)
+        # Подключение обработчиков нажатия на кнопки меню
         show_action.triggered.connect(self.show_main_window)
         hide_action.triggered.connect(self.hide_main_window)
+        help_action.triggered.connect(self.show_help)
         setting_action.triggered.connect(self.show_settings_window)
         quit_action.triggered.connect(self.close_main_window)
         tray_menu = QMenu()
         tray_menu.addAction(show_action)
         tray_menu.addAction(hide_action)
-        tray_menu.addAction(quit_action)
+        tray_menu.addAction(help_action)
         tray_menu.addAction(setting_action)
+        tray_menu.addAction(quit_action)
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
 
 if __name__ == "__main__":
 
     app = QApplication(sys.argv)
-
-
-
-
     mainWindow = MainWindow()
     # Чтобы исключить мелькание, нужно изначально сместить окно за рамки экрана
     mainWindow.move(mainWindow.width() * -3, 0)
-    # mainWindow.show()
+    # Показывать окно приложения только в определнное время суток
     mainWindow.not_show_window_from_to()
+    # Показать главное окно
     mainWindow.show_main_window()
-
     # Разместить окно в правом нижнем углу
     mainWindow.move_to_right_bottom_corner()
     sys.exit(app.exec_())
