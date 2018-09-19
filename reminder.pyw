@@ -7,7 +7,7 @@ import threading
 import os
 import sys
 import SQLiteAPI
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import QApplication, QMenu, QAction, QSystemTrayIcon, QStyle, QMessageBox
 from RBase import RBase
 
@@ -85,7 +85,8 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         # указанному в переменной класса pid_file. Если файл существует - это означает, что уже запущен один экземпляр
         # приложения и осуществляется завершение работы второго экземпляра
         self.exit_app_if_running(self.pid_file)
-
+        # Иконка приложения
+        self.setWindowIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
 
     def contextMenuEvent(self, event):
         """
@@ -366,7 +367,7 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         :return: None
         """
         self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
         # Создание пунктов меню
         show_action = QAction("Показать окно", self)
         hide_action = QAction("Скрыть окно", self)
