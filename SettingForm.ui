@@ -107,6 +107,9 @@ p, li { white-space: pre-wrap; }
     </item>
     <item>
      <widget class="QPushButton" name="clearCounterButton">
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Обнулить счетчик&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
       <property name="text">
        <string>Сбросить счетчик</string>
       </property>
@@ -149,7 +152,7 @@ p, li { white-space: pre-wrap; }
        </size>
       </property>
       <property name="toolTip">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Время, в течении которого будет показваться напоминание. По умолчанию - 2 мин.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Время, в течении которого будет показваться напоминание. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
      </widget>
     </item>
@@ -216,7 +219,7 @@ p, li { white-space: pre-wrap; }
        </size>
       </property>
       <property name="toolTip">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Время, в течении которого будет показваться напоминание. По умолчанию - 2 мин.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Время, в течении которого окно будет скрыто&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
      </widget>
     </item>
@@ -256,11 +259,14 @@ p, li { white-space: pre-wrap; }
         <height>16777215</height>
        </size>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Время суток, после которого окно приложения начинает показываться&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
      </widget>
     </item>
    </layout>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>30</x>
@@ -291,19 +297,19 @@ p, li { white-space: pre-wrap; }
         <height>16777215</height>
        </size>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Время суток, после которого окно приложения не будет показываться&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
      </widget>
     </item>
    </layout>
   </widget>
+  <zorder>layoutWidget</zorder>
   <zorder>horizontalLayoutWidget</zorder>
   <zorder>messageTextEdit</zorder>
   <zorder>layoutWidget</zorder>
   <zorder>layoutWidget</zorder>
   <zorder>layoutWidget</zorder>
-  <zorder>timeEditDontShowAfter</zorder>
-  <zorder>labeldontShowAfter</zorder>
-  <zorder>labeldontShowAfter</zorder>
-  <zorder>timeEditDontShowAfter</zorder>
   <zorder>layoutWidget_2</zorder>
   <zorder>layoutWidget_3</zorder>
  </widget>

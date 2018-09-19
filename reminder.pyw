@@ -2,7 +2,7 @@
 Модуль с классом MainWindow
 """
 
-import MainForm, settings, help
+import MainForm, settings, help, about
 import threading
 import os
 import sys
@@ -100,6 +100,8 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         cmenu.addAction("Настройки", self.show_settings_window)
         # При нажатии на кнопку Справка - показать справку
         cmenu.addAction("Справка", self.show_help)
+        # При нажатии на кнопку О программе - показать окно "О программе"
+        cmenu.addAction("О программе", self.show_about)
         # При нажатии на кнопку Выход - закрыть главное окно приложения
         cmenu.addAction("Выход", self.close_main_window)
         cmenu.exec_(self.mapToGlobal(event.pos()))
@@ -240,6 +242,10 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         self.not_show_window_from_to()
 
     def show_help(self):
+        """
+        Функция show_help показывает окно со справкой по программе
+        :return:
+        """
         if self.isHidden():
             self.show()
         self.help_window = help.HelpWindow()
@@ -252,6 +258,24 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         # Показываем окно
 
         self.help_window.show()
+
+    def show_about(self):
+        """
+        Функция show_help показывает окно со справкой по программе
+        :return:
+        """
+        if self.isHidden():
+            self.show()
+        self.about_window = about.AboutWindow()
+        # Останавливаем таймер, запущенный в данный момент. По таймерам срабатывают функции скрытия
+        # и показа главнонго окна
+        self.stop_timers()
+        # Переменной класса help_window - parent - устанавливаем ссылку на главное окно для последующего доступа
+        # из окна настроек к методам и атрибутам главного окна
+        self.about_window.parent = self
+        # Показываем окно
+
+        self.about_window.show()
 
     def increase_counter(self):
         """
@@ -341,17 +365,20 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         hide_action = QAction("Скрыть окно", self)
         setting_action = QAction("Настройки", self)
         help_action = QAction("Справка", self)
+        about_action = QAction("О программе", self)
         quit_action = QAction("Выход", self)
         # Подключение обработчиков нажатия на кнопки меню
         show_action.triggered.connect(self.show_main_window)
         hide_action.triggered.connect(self.hide_main_window)
         help_action.triggered.connect(self.show_help)
         setting_action.triggered.connect(self.show_settings_window)
+        about_action.triggered.connect(self.show_about)
         quit_action.triggered.connect(self.close_main_window)
         tray_menu = QMenu()
         tray_menu.addAction(show_action)
         tray_menu.addAction(hide_action)
         tray_menu.addAction(help_action)
+        tray_menu.addAction(about_action)
         tray_menu.addAction(setting_action)
         tray_menu.addAction(quit_action)
         self.tray_icon.setContextMenu(tray_menu)
