@@ -121,12 +121,13 @@ class MainWindow(QtWidgets.QMainWindow, MainForm.Ui_mainForm, RBase):
         curtime = QtCore.QTime.currentTime()
         # Если время начала запрета показа окна меньше времени окончания запрета (например, не показывать с 01:00 по 09:00)
         if QtCore.QTime.fromString(self.time_dont_show_after) < QtCore.QTime.fromString(self.time_start_show_since):
+            # Если текущее время больше времени запрета показа и текущее время меньше времени начала показа
             if curtime > QtCore.QTime.fromString(self.time_dont_show_after) and curtime < QtCore.QTime.fromString(self.time_start_show_since):
-                self.hide()
+                self.hide_main_window()
         # Если время начала запрета показа окна больше времени окончания запрета (например, не показывать с 23:00 по 09:00)
         else:
             if curtime > QtCore.QTime.fromString(self.time_dont_show_after) and curtime > QtCore.QTime.fromString(self.time_start_show_since):
-                self.hide()
+                self.hide_main_window()
 
     # Получить настройки из базы и применить их к соответсвующим компонентам
     # сделать свойством класса, чтобы можно было получить доступ из другого окна

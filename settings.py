@@ -76,7 +76,8 @@ class SettingsWindow(QtWidgets.QWidget, SettingForm.Ui_settingsForm, RBase):
         Функция change_font() получает шрифт текста с помощью диалогового окна QFontDialog и применяет их к тексту
         """
         self.deselect_text(self.messageTextEdit)
-        font, ok = QFontDialog.getFont(QFont("Tahoma", 16), parent=self, caption="Выбор шрифта", options=QFontDialog.DontUseNativeDialog)
+        # font, ok = QFontDialog.getFont(QFont("Tahoma", 16), parent=self, caption="Выбор шрифта", options=QFontDialog.DontUseNativeDialog)
+        font, ok = QFontDialog.getFont(self.messageTextEdit.font(), parent=self, caption="Выбор шрифта", options=QFontDialog.DontUseNativeDialog)
         if ok:
             text = self.messageTextEdit.toPlainText()
             pointSize = font.pointSizeF()
@@ -87,16 +88,28 @@ class SettingsWindow(QtWidgets.QWidget, SettingForm.Ui_settingsForm, RBase):
             italic = font.italic()
             underline = font.underline()
             strikeOut = font.strikeOut()
+
             if italic:
                 self.messageTextEdit.setFontItalic(True)
+            else:
+                self.messageTextEdit.setFontItalic(False)
+
             if bold:
                 self.messageTextEdit.setFontWeight(600)
+            else:
+                self.messageTextEdit.setFontWeight(0)
+
             if underline:
                 self.messageTextEdit.setFontUnderline(True)
+            else:
+                self.messageTextEdit.setFontUnderline(False)
+
+            font = self.messageTextEdit.font()
             if strikeOut:
-                font = self.messageTextEdit.font()
                 font.setStrikeOut(True)
-                self.messageTextEdit.setFont(font)
+            else:
+                font.setStrikeOut(False)
+            self.messageTextEdit.setFont(font)
             self.add_text_to_text_edit(self.messageTextEdit, text)
 
     def change_text_color(self):
@@ -106,7 +119,8 @@ class SettingsWindow(QtWidgets.QWidget, SettingForm.Ui_settingsForm, RBase):
         # Если выделить текст и затем устанавливать цвет, то вылетает с ошибкой.
         # Для этого сначала снимаем выделение с текста
         self.deselect_text(self.messageTextEdit)
-        text_color = QColorDialog.getColor()
+        # text_color = QColorDialog.getColor()
+        text_color = QColorDialog.getColor(self.messageTextEdit.textColor())
         if text_color.isValid():
             text = self.messageTextEdit.toPlainText()
             self.messageTextEdit.setTextColor(text_color)
